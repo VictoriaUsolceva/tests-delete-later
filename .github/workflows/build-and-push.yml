@@ -1,13 +1,15 @@
 name: Build and Push Images to GHCR
 
-# Воркфлоу запускается автоматически при каждом пуше в ветку main (или master)
 on:
-  push:
+  workflow_run:
+    workflows: ["Tests 15 sprint"]
+    types:
+      - completed
     branches:
       - main
       - master
+      - review-3
 
-# Выдаем права для использования встроенного GITHUB_TOKEN для работы с пакетами
 permissions:
   contents: read
   packages: write
@@ -15,16 +17,14 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      # Step 1: Скачиваем исходный код проекта на сервер GitHub
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Инициализируем Buildx (продвинутый сборщик Docker)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 3: Логинимся в GitHub Container Registry с помощью встроенного токена
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -32,12 +32,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 4: Переводим имя репозитория в нижний регистр (требование Docker)
       - name: Downcase repo string
         run: |
           echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
 
-      # Step 5: Собираем и пушим Бэкенд
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
@@ -46,7 +44,6 @@ jobs:
           push: true
           tags: ghcr.io/${{ env.REPO_LC }}/backend:latest
 
-      # Step 6: Собираем и пушим Фронтенд
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
         with:
@@ -55,7 +52,6 @@ jobs:
           push: true
           tags: ghcr.io/${{ env.REPO_LC }}/frontend:latest
 
-      # Step 7: Собираем и пушим Nginx
       - name: Build and push Nginx
         uses: docker/build-push-action@v5
         with:
