@@ -15,6 +15,7 @@ import { LoggerModule } from './logger/logger.module';
     TypeOrmModule.forRootAsync({
       imports: [AppConfigModule],
       useFactory: (config: AppConfig) => {
+        console.log("🚀 ~ config:", config)
         return {
           type: config.database.driver,
           host: config.database.host,
